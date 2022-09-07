@@ -12,35 +12,32 @@ const clientId = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 /**
  * @param {string} id
  * @param {boolean} isVod
+ * @returns {Promise<{ value: string; signature: string; }>}
  */
 function getAccessToken(id, isVod) {
-	const data = isVod
-	? JSON.stringify([
-		{
-			operationName: "VideoCommentsByOffsetOrCursor",
-			variables: {
-				videoID: id,
-				contentOffsetSeconds: 0
-			},
-			extensions: {
-				persistedQuery: {
-					version: 1,
-					sha256Hash: "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a"
-				}
-			}
-		}
-	])
-	: JSON.stringify({
-		operationName: "PlaybackAccessToken_Template",
-		query: "query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}",
+	const payload = {
 		variables: {
-			isLive: false,
-			login: id,
+			isLive: !isVod,
+			login: isVod ? "" : id,
 			isVod: isVod,
-			vodID: "",
+			vodID: isVod ? id : "",
 			playerType: "embed"
 		}
-	});
+	};
+	if (isVod) {
+		payload.operationName = "PlaybackAccessToken_Template"
+		payload.query = "query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}";
+	}
+	else {
+		payload.operationName = "PlaybackAccessToken";
+		payload.extensions = {
+			persistedQuery: {
+				version: 1,
+				sha256Hash: "0828119ded1c13477966434e15800ff57ddacf13ba1911c129dc2200705b0712"
+			}
+		};
+	}
+	const data = JSON.stringify(payload);
 
 	const options = {
 		hostname: 'gql.twitch.tv',
